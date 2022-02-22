@@ -1,0 +1,34 @@
+data_image0
+_chemical_formula_structural       S2F2O4N
+_chemical_formula_sum              "S2 F2 O4 N1"
+_cell_length_a       93.5399
+_cell_length_b       93.5399
+_cell_length_c       93.5399
+_cell_angle_alpha    90
+_cell_angle_beta     90
+_cell_angle_gamma    90
+
+_space_group_name_H-M_alt    "P 1"
+_space_group_IT_number       1
+
+loop_
+  _space_group_symop_operation_xyz
+  'x, y, z'
+
+loop_
+  _atom_site_type_symbol
+  _atom_site_label
+  _atom_site_symmetry_multiplicity
+  _atom_site_fract_x
+  _atom_site_fract_y
+  _atom_site_fract_z
+  _atom_site_occupancy
+  S   S1        1.0  0.16656  0.18598  0.83630  1.0000
+  S   S2        1.0  0.14014  0.17790  0.82371  1.0000
+  F   F1        1.0  0.17614  0.19048  0.82385  1.0000
+  F   F2        1.0  0.13130  0.17563  0.83746  1.0000
+  O   O1        1.0  0.17565  0.17896  0.84591  1.0000
+  O   O2        1.0  0.16117  0.19981  0.84122  1.0000
+  O   O3        1.0  0.13669  0.19248  0.81829  1.0000
+  O   O4        1.0  0.13640  0.16622  0.81412  1.0000
+  N   N1        1.0  0.15561  0.17552  0.82910  1.0000
