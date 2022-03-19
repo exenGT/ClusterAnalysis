@@ -73,7 +73,7 @@ def cluster(image,
                         num_at_unit):
 
         """
-        Function that returns 
+        Function that returns the main-auxiliary ion neighbor dictionary
         
         Args:
 
@@ -144,7 +144,7 @@ def cluster(image,
 
 ###########################################################################
 
-def analyze(args_list):
+def analyze(args_list=None):
 
     """
     Function that analyzes the cluster from the molecular dynamics dump files.
@@ -203,7 +203,6 @@ def analyze(args_list):
         path = args.path
     else:
         path = os.getcwd()
-    # path = "/Users/jw598/Cui_group_research/Machine_learning_CE/jobs/solutions/EL5_large/350K_analysis/"
 
     try:
         os.chdir(path)
@@ -281,7 +280,7 @@ def analyze(args_list):
         image.set_pbc(True)
         image.wrap()
     
-        cluster_atom_indices, cluster_sizes, N_main_N_aux = cluster(image,
+        cluster_atom_indices, cluster_sizes, N_main_N_aux = cluster(image=image,
                                                                     species_main_marker=species_main_marker,
                                                                     species_aux_marker=species_aux_marker,
                                                                     num_unit=num_units,
