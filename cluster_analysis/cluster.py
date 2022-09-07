@@ -10,11 +10,12 @@ from ase.io import write
 import argparse
 from argparse import RawTextHelpFormatter
 import textwrap
+from distutils.util import strtobool
 
 from collections import defaultdict
 
-from cluster_analysis.neigh_search import get_neighbors
-from cluster_analysis.cluster_search import path_search
+from .neigh_search import get_neighbors
+from .cluster_search import path_search
 
 
 """
@@ -35,19 +36,34 @@ def cluster(image,
     Function that returns list of populations of the main and auxiliary ions
     in a salt configuration
 
+
     Args:
 
     image (ase.atoms):  configuration containing salt ions
+
     species_main_marker (string):  name of the main ion species
+
     species_aux_marker (string):  name of the auxiliary ion species
+
     num_unit (int):  number of salt "units" in the configuration
+
     num_at_unit (int):  number of atoms in a salt unit
+
     unit_main_atoms_indices (list int): list of atom indices in a single main ion
+
     unit_aux_atoms_indices (list int): list of atom indices in a single aux ion
+
 
     Return:
 
-    N_main_N_aux (numpy.ndarray int):  array of populations of main and auxiliary ions
+    cluster_atom_indices (numpy.ndarray):
+    array of all atom indices within a cluster of length >= 2
+
+    cluster_sizes (dict):
+    histogram of the number of clusters with different lengths
+
+    N_main_N_aux (list):
+    list of populations of main and aux ions
     """
 
     ## get species array
@@ -131,7 +147,7 @@ def cluster(image,
 
 
     ## find all clusters in the configuration
-    cluster_atom_indices, cluster_sizes, N_main_N_aux \
+    clusters_atom_indices, clusters_size, N_main_N_aux \
       = path_search(main_neigh_aux_indices_dict, 
                     aux_neigh_main_indices_dict, 
                     num_unit, 
@@ -139,7 +155,7 @@ def cluster(image,
                     unit_main_atoms_indices,
                     unit_aux_atoms_indices)
 
-    return cluster_atom_indices, cluster_sizes, N_main_N_aux
+    return clusters_atom_indices, clusters_size, N_main_N_aux
 
 
 ###########################################################################
@@ -157,25 +173,25 @@ def analyze(args_list=None):
     parser = argparse.ArgumentParser(description='Main function of cluster analysis.', 
                                      formatter_class=RawTextHelpFormatter)
 
-    parser.add_argument('--path',
+    parser.add_argument('-p', '--path',
                         type=str,
                         required=False, 
                         metavar='path',
                         help='Working path directory. (Default: current directory)')
 
-    parser.add_argument('--num_dump',
+    parser.add_argument('-n', '--num_dump',
                         type=int,
                         required=True,
                         metavar='num_dump',
                         help='Number of dump files to be analyzed.')
 
-    parser.add_argument('--dump_dir',
+    parser.add_argument('-d', '--dump_dir',
                         type=str,
                         required=True,
                         metavar='dump_dir',
                         help='Directory of dump files.')
 
-    parser.add_argument('--info_file',
+    parser.add_argument('-i', '--info_file',
                         type=str,
                         required=True, 
                         metavar='info_file',
@@ -189,13 +205,37 @@ def analyze(args_list=None):
                               5th line: species string of main marker atom
                               6th line: species string of auxiliary marker atom'''))
 
-    parser.add_argument('--salt_unit_file',
+    parser.add_argument('-u', '--salt_unit_file',
                         type=str,
                         required=True, 
                         metavar='salt_unit_file',
                         help=textwrap.dedent('''\
                              Name of structure file of the salt unit. Should be located in path.
                              Format: *.xyz'''))
+
+    parser.add_argument('-c', '--output_clusters_coords',
+                        # type=lambda x: bool(strtobool(x)),
+                        type=bool,
+                        default=True,
+                        metavar='salt_unit_file',
+                        help=textwrap.dedent('''\
+                             Whether to output clusters coordinates into *.cif files.'''))
+
+    parser.add_argument('-s', '--output_clusters_size',
+                        # type=lambda x: bool(strtobool(x)),
+                        type=bool,
+                        default=True,
+                        metavar='salt_unit_file',
+                        help=textwrap.dedent('''\
+                             Whether to output clusters size into a text file.'''))
+
+    parser.add_argument('-r', '--output_gyration_radius',
+                        # type=lambda x: bool(strtobool(x)),
+                        type=bool,
+                        default=True,
+                        metavar='salt_unit_file',
+                        help=textwrap.dedent('''\
+                             Whether to output cluster radius of gyration into a text file.'''))
 
     args = parser.parse_args(args_list)
 
@@ -280,46 +320,57 @@ def analyze(args_list=None):
         image.set_pbc(True)
         image.wrap()
     
-        cluster_atom_indices, cluster_sizes, N_main_N_aux = cluster(image=image,
-                                                                    species_main_marker=species_main_marker,
-                                                                    species_aux_marker=species_aux_marker,
-                                                                    num_unit=num_units,
-                                                                    num_at_unit=num_at_unit,
-                                                                    unit_main_atoms_indices=unit_main_atoms_indices,
-                                                                    unit_aux_atoms_indices=unit_aux_atoms_indices)
+        clusters_atom_indices, \
+        clusters_size, \
+        N_main_N_aux = cluster(image=image,
+                               species_main_marker=species_main_marker,
+                               species_aux_marker=species_aux_marker,
+                               num_unit=num_units,
+                               num_at_unit=num_at_unit,
+                               unit_main_atoms_indices=unit_main_atoms_indices,
+                               unit_aux_atoms_indices=unit_aux_atoms_indices)
 
         ### write each cluster to cif file
-        if len(cluster_atom_indices) > 0:
+        if args.output_clusters_coords:
 
-            os.chdir("../images_cluster")
-    
-            cluster_atom_indices_flattened = []
-    
-            for i_cluster, cluster_info in enumerate(cluster_atom_indices):
-    
-                N_main, N_aux, cluster_atom_indices = cluster_info
+            if len(clusters_atom_indices) > 0:
         
-                cluster_atom_indices_flattened += cluster_atom_indices
+                os.chdir("../images_cluster")
+        
+                clusters_atom_indices_flattened = []
+        
+                for i_cluster, cluster_info in enumerate(clusters_atom_indices):
+
+                    ### DEBUG ###
+                    print("cluster_info = {}".format(cluster_info))
+                    ### DEBUG ###
+        
+                    N_main, N_aux, atom_indices = cluster_info
             
-                ## build a new atoms object from the atoms with indices "neigh_atom_inds"
-                image_cluster = image[cluster_atom_indices]
+                    clusters_atom_indices_flattened += atom_indices
+                
+                    ## build a new atoms object from the atoms with indices "neigh_atom_inds"
+                    image_cluster = image[atom_indices]
+            
+                    ## only write clusters in the first image
+                    if (i == 0):
+                        write('image_' + str(i) + '_cluster_' + str(i_cluster) + \
+                              '_' + str(N_main) + '-' + str(N_aux) + '.cif', image_cluster)
         
-                ## only write clusters in the first image
-                if (i == 0):
-                    write('image_' + str(i) + '_cluster_' + str(i_cluster) + \
-                          '_' + str(N_main) + '-' + str(N_aux) + '.cif', image_cluster)
-    
-            os.chdir("../" + dump_dir)
+                os.chdir("../" + dump_dir)
 
+        if args.output_clusters_size:
 
-        try:
-            N_main_N_aux_accumu = np.concatenate((N_main_N_aux_accumu, N_main_N_aux), axis=0)
-    
-        except ValueError:
-            N_main_N_aux_accumu = N_main_N_aux
+            try:
+                N_main_N_aux_accumu = np.concatenate((N_main_N_aux_accumu, N_main_N_aux), axis=0)
+        
+            except ValueError:
+                N_main_N_aux_accumu = N_main_N_aux
     
 
     ## save the cluster distribution as text file
     os.chdir("..")
-    np.savetxt("cluster_sizes_hist.txt", N_main_N_aux_accumu, fmt='%d,%d')
+
+    if args.output_clusters_size:
+        np.savetxt("clusters_size_hist.txt", N_main_N_aux_accumu, fmt='%d,%d')
 

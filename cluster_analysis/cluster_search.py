@@ -32,10 +32,10 @@ def path_search(main_neigh_aux_indices_dict,
 
     Return:
 
-    mro_atom_indices (numpy.ndarray): 
+    clusters_atom_indices (numpy.ndarray): 
     array of all atom indices within a cluster of length >= 2
 
-    cluster_sizes (dict): 
+    clusters_size (dict): 
     histogram of the number of clusters with different lengths
 
     N_main_N_aux (list):
@@ -43,17 +43,17 @@ def path_search(main_neigh_aux_indices_dict,
 
     """
 
-    ## initialize mro atom indices and cluster lengths
-    mro_atom_indices = []
-    cluster_sizes = []
+    ## initialize clusters atom indices and cluster lengths
+    clusters_atom_indices = []
+    clusters_size = []
 
     ## initialize main atom indices and aux ion indices
     main_ion_indices = list(range(num_unit))
     aux_ion_indices = list(range(num_unit))
 
     ## initialize cluster length for each main and aux ion index
-    main_ion_indices_cluster_sizes = np.zeros(num_unit)
-    aux_ion_indices_cluster_sizes = np.zeros(num_unit)
+    main_ion_indices_clusters_size = np.zeros(num_unit)
+    aux_ion_indices_clusters_size = np.zeros(num_unit)
 
     ## initialize (number of main ions, number of aux ions) in each cluster
     N_main_N_aux = []
@@ -122,7 +122,7 @@ def path_search(main_neigh_aux_indices_dict,
             ## for each neighboring aux ion of this main atom
             for aux_ion_index in main_neigh_aux_indices:
 
-                aux_ion_indices_cluster_sizes[aux_ion_index] = cluster_size
+                aux_ion_indices_clusters_size[aux_ion_index] = cluster_size
 
                 ## if this aux ion is not visited:
                 if not aux_ion_indices_is_visited[aux_ion_index]:
@@ -158,7 +158,7 @@ def path_search(main_neigh_aux_indices_dict,
                         main_ion_indices_is_visited[main_ion_index_2] = True
 
 
-        cluster_sizes.append(cluster_size)
+        clusters_size.append(cluster_size)
         N_main_N_aux.append([N_main, N_aux])
 
         ## add clusters of size > 1
@@ -173,26 +173,26 @@ def path_search(main_neigh_aux_indices_dict,
                                        + np.array(unit_aux_atoms_indices))
 
 
-        mro_atom_indices.append((N_main, N_aux, cluster_atom_indices))
+        clusters_atom_indices.append((N_main, N_aux, cluster_atom_indices))
 
 
     ## add the zero cluster lengths for dissociated aux ions
     for aux_index in aux_ion_indices_unvisited:
 
-        cluster_sizes.append(0)
+        clusters_size.append(0)
         N_main_N_aux.append([0, 1])
 
-        mro_atom_indices.append((0, 1, \
+        clusters_atom_indices.append((0, 1, \
                                  list(aux_index*num_at_unit + np.array(unit_aux_atoms_indices))))
 
     ## print important information
-    print("cluster_sizes = {}".format(cluster_sizes))
+    print("clusters_size = {}".format(clusters_size))
 
-    print("cluster size sum = {}".format(np.sum(cluster_sizes)))
-    print("cluster size mean = {}".format(np.mean(cluster_sizes)))
+    print("cluster size sum = {}".format(np.sum(clusters_size)))
+    print("cluster size mean = {}".format(np.mean(clusters_size)))
 
-    print("number of clusters = {}".format(len(cluster_sizes)))
+    print("number of clusters = {}".format(len(clusters_size)))
 
 
-    return mro_atom_indices, cluster_sizes, N_main_N_aux
-
+    return clusters_atom_indices, clusters_size, N_main_N_aux
+    

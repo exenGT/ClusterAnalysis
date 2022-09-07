@@ -9,11 +9,11 @@ from cluster_analysis.histplot import plot_hist
 #                    '--info_file', "info_file.txt",
 #                    '--salt_unit_file', "LiFSI.xyz"])
 
-analyze(args_list=['--path', "/Users/jw598/Cui_group_research/Machine_learning_CE/jobs/solutions/EL5_large/300K_analysis",
-                   '--num_dump', "5",
-                   '--dump_dir', "dump_salt",
-                   '--info_file', "info_file.txt",
-                   '--salt_unit_file', "LiFSI.xyz"])
+# analyze(args_list=['--path', "/Users/jw598/Cui_group_research/Machine_learning_CE/jobs/solutions/EL5_large/300K_analysis",
+#                    '--num_dump', "5",
+#                    '--dump_dir', "dump_salt",
+#                    '--info_file', "info_file.txt",
+#                    '--salt_unit_file', "LiFSI.xyz"])
 
 # plot_hist(path="/Users/jw598/Cui_group_research/Machine_learning_CE/jobs/solutions/EL5_large/300K_analysis/dump_salt",
 #           hist_file="cluster_sizes_hist.txt", 
