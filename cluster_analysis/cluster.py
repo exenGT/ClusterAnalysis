@@ -301,7 +301,9 @@ def analyze(args_list=None):
     num_dump = args.num_dump
     dump_range = range(0, num_dump)
 
+    ## initialize empty size lists
     N_main_N_aux_accumu = [[]]
+    R_g_accumu = []
 
     
     for i, image_num in enumerate(dump_range):
@@ -319,6 +321,8 @@ def analyze(args_list=None):
     
         image.set_pbc(True)
         image.wrap()
+
+        Lx, Ly, Lz = image.get_cell_lengths_and_angles()[0:3]
     
         clusters_atom_indices, \
         clusters_size, \
@@ -331,33 +335,123 @@ def analyze(args_list=None):
                                unit_aux_atoms_indices=unit_aux_atoms_indices)
 
         ### write each cluster to cif file
-        if args.output_clusters_coords:
 
-            if len(clusters_atom_indices) > 0:
+        if len(clusters_atom_indices) > 0:
         
-                os.chdir("../images_cluster")
-        
-                clusters_atom_indices_flattened = []
-        
-                for i_cluster, cluster_info in enumerate(clusters_atom_indices):
+            os.chdir("../images_cluster")
 
-                    ### DEBUG ###
-                    print("cluster_info = {}".format(cluster_info))
-                    ### DEBUG ###
+            R_g = []
+
         
-                    N_main, N_aux, atom_indices = cluster_info
-            
-                    clusters_atom_indices_flattened += atom_indices
-                
-                    ## build a new atoms object from the atoms with indices "neigh_atom_inds"
-                    image_cluster = image[atom_indices]
-            
-                    ## only write clusters in the first image
-                    if (i == 0):
-                        write('image_' + str(i) + '_cluster_' + str(i_cluster) + \
-                              '_' + str(N_main) + '-' + str(N_aux) + '.cif', image_cluster)
+            for i_cluster, cluster_info in enumerate(clusters_atom_indices):
         
-                os.chdir("../" + dump_dir)
+                N_main, N_aux, atom_indices = cluster_info
+            
+                ## build a new atoms object from the atoms with indices "neigh_atom_inds"
+                image_cluster = image[atom_indices]
+
+                ## unwraps the coordinates across the periodic boundaries
+                coords = image_cluster.get_positions()
+                # print("coords.shape = {}".format(coords.shape))
+
+                if coords.shape[0] > 1:
+
+                    X, Y, Z = coords.T
+
+                    X_sorted_inds = np.argsort(X)
+                    Y_sorted_inds = np.argsort(Y)
+                    Z_sorted_inds = np.argsort(Z)
+
+                    X_sorted = X[X_sorted_inds]
+                    Y_sorted = Y[Y_sorted_inds]
+                    Z_sorted = Z[Z_sorted_inds]
+
+                    delta_X = X_sorted[1:] - X_sorted[:-1]
+                    delta_Y = Y_sorted[1:] - Y_sorted[:-1]
+                    delta_Z = Z_sorted[1:] - Z_sorted[:-1]
+
+                    max_sep = 10.
+
+                    X_gap = np.argwhere(delta_X > max_sep)
+                    Y_gap = np.argwhere(delta_Y > max_sep)
+                    Z_gap = np.argwhere(delta_Z > max_sep)
+
+
+                    if X_gap:
+
+                        X_bound_gt_ind = X_gap[0, 0] + 1
+
+                        X_le_inds = X_sorted_inds[:X_bound_gt_ind]
+                        X_gt_inds = X_sorted_inds[X_bound_gt_ind:]
+
+                        # print("X = {}".format(X))
+
+                        X[X_le_inds] += Lx / 2.
+                        X[X_gt_inds] -= Lx / 2.
+
+                        # print("X = {}".format(X))
+
+
+                    if Y_gap:
+
+                        Y_bound_gt_ind = Y_gap[0, 0] + 1
+
+                        Y_le_inds = Y_sorted_inds[:Y_bound_gt_ind]
+                        Y_gt_inds = Y_sorted_inds[Y_bound_gt_ind:]
+
+                        # print("Y = {}".format(Y))
+
+                        Y[Y_le_inds] += Ly / 2.
+                        Y[Y_gt_inds] -= Ly / 2.
+
+                        # print("Y = {}".format(Y))
+
+
+                    if Z_gap:
+
+                        Z_bound_gt_ind = Z_gap[0, 0] + 1
+
+                        Z_le_inds = Z_sorted_inds[:Z_bound_gt_ind]
+                        Z_gt_inds = Z_sorted_inds[Z_bound_gt_ind:]
+
+                        # print("Z = {}".format(Z))
+
+                        Z[Z_le_inds] += Lz / 2.
+                        Z[Z_gt_inds] -= Lz / 2.
+
+                        # print("Z = {}".format(Z))
+
+    
+                    new_coords = np.vstack((X, Y, Z)).T
+    
+                    image_cluster.set_positions(new_coords)
+    
+                    # print("--------------------------------")
+
+                ### DEBUG ###
+
+                ## calculate the radius of gyration
+
+                com = image_cluster.get_center_of_mass()
+                centered_pos = image_cluster.get_positions() - com
+                centered_pos_dot = np.sum(centered_pos*centered_pos, axis=1)
+                r_g = np.sqrt(np.mean(centered_pos_dot))
+                R_g.append(r_g)
+                # print("com = {}".format(com))
+                # print("centered_pos = {}".format(centered_pos))
+                # print("centered_pos_dot = {}".format(centered_pos_dot))
+                # print("r_g = {}".format(r_g))
+
+
+                ### DEBUG ###
+        
+                ## only write clusters in the first image
+                if (i == 0):
+                    write('image_' + str(i) + '_cluster_' + str(i_cluster) + \
+                          '_' + str(N_main) + '-' + str(N_aux) + '.cif', image_cluster)
+        
+            os.chdir("../" + dump_dir)
+
 
         if args.output_clusters_size:
 
@@ -366,11 +460,25 @@ def analyze(args_list=None):
         
             except ValueError:
                 N_main_N_aux_accumu = N_main_N_aux
-    
+
+
+        if args.output_gyration_radius:
+
+            print("R_g = {}".format(R_g))
+
+            try:
+                R_g_accumu = np.concatenate((R_g_accumu, R_g), axis=0)
+
+            except ValueError:
+                R_g_accumu = R_g
+
 
     ## save the cluster distribution as text file
     os.chdir("..")
 
     if args.output_clusters_size:
         np.savetxt("clusters_size_hist.txt", N_main_N_aux_accumu, fmt='%d,%d')
+
+    if args.output_gyration_radius:
+        np.savetxt("clusters_rg_hist.txt", R_g_accumu, fmt='%.2f')
 
