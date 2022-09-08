@@ -41,3 +41,5 @@ The package separates a molecular dynamics image into individual images (\*.cif 
 
 Meanwhile, the package returns the information about the cluster size, distribution, etc.
 
+If requested, the clusters' size are stored in `clusters_size_hist.txt`, and the clusters' radius of gyration are stored in `clusters_rg_hist.txt`.
+
